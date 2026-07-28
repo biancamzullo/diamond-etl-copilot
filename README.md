@@ -47,6 +47,69 @@ To audit the integrity of the pricing engine over time, the pipeline invokes an 
 ### 6. The Interface (Streamlit UI)
 A high-performance, strictly typed frontend application engineered via Streamlit. To enforce the Frank Darling brand standard, Streamlit's native Emotion CSS engine has been entirely overridden via raw inline HTML injection. The interface employs a stark, minimalist hierarchy using the Cormorant Garamond typeface and a strictly controlled palette (Midnight Navy and Royal Blue), ensuring a sterile, highly readable command center for data operations.
 
+### 7. The Output (Shopify-Ready JSON)
+The final stage of the pipeline translates the fully normalized, priced, and anomaly-screened data into a strict JSON payload engineered specifically for the Shopify Admin API. This guarantees zero-friction inventory syncing and maps physical asset specifications directly into Shopify Metafields for granular storefront filtering.
+
+```json
+{
+  "product": {
+    "title": "1.50 Carat Round Diamond - E Color, VVS2 Clarity, Ideal Cut",
+    "body_html": "<p>Fully vetted, precision-cut loose diamond.</p>",
+    "vendor": "Frank Darling Systems",
+    "product_type": "Loose Diamond",
+    "status": "active",
+    "tags": [
+      "Shape_Round", 
+      "Color_E", 
+      "Clarity_VVS2", 
+      "Cut_Ideal"
+    ],
+    "variants": [
+      {
+        "sku": "FD-DIA-R-150-E-VVS2",
+        "price": "7550.00",
+        "compare_at_price": null,
+        "inventory_management": "shopify",
+        "inventory_quantity": 1,
+        "weight": 1.50,
+        "weight_unit": "ct",
+        "requires_shipping": true
+      }
+    ],
+    "metafields": [
+      {
+        "namespace": "diamond_specs",
+        "key": "carat",
+        "value": "1.50",
+        "type": "number_decimal"
+      },
+      {
+        "namespace": "diamond_specs",
+        "key": "color",
+        "value": "E",
+        "type": "single_line_text_field"
+      },
+      {
+        "namespace": "diamond_specs",
+        "key": "clarity",
+        "value": "VVS2",
+        "type": "single_line_text_field"
+      },
+      {
+        "namespace": "diamond_specs",
+        "key": "cut",
+        "value": "Ideal",
+        "type": "single_line_text_field"
+      },
+      {
+        "namespace": "diamond_specs",
+        "key": "wholesale_cost_audited",
+        "value": "5200.00",
+        "type": "number_decimal"
+      }
+    ]
+  }
+}
 ---
 
 ## LOCAL EXECUTION & AUDIT PROTOCOL
