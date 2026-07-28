@@ -3,6 +3,14 @@
 ## OVERVIEW
 This architecture is a highly opinionated, deterministic ETL pipeline designed to ingest chaotic, unstructured supplier inventory feeds and synthesize them into a heavily structured, retail-ready data warehouse. We do not tolerate data entropy. By combining large language models for semantic parsing, immutable business logic for pricing, and unsupervised machine learning for statistical anomaly detection, this system acts as a ruthless filter between supplier chaos and the Frank Darling storefront.
 
+## LIVE DEMO & INTERFACE PREVIEW
+
+<video src="https://github.com/user-attachments/assets/3497c0d9-2d51-49e2-a7dd-2a4347d71bed" controls="controls" width="100%" style="max-height:640px;">
+  Your browser does not support the video tag.
+</video>
+
+*The video above demonstrates the pipeline processing chaotic supplier inputs, running batch semantic extraction via Gemini, applying pricing heuristics, and quarantining statistical anomalies in real time.*
+
 ## SYSTEM ARCHITECTURE
 
 ### 1. The Messy Data Generator (Entropy Simulation)
@@ -67,3 +75,7 @@ GOOGLE_API_KEY="your_api_key_here"
 ```bash
 streamlit run app.py
 ```
+
+
+
+
