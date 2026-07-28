@@ -34,14 +34,14 @@ We assume all incoming data is hostile or erroneous until proven otherwise. This
 *   **Heuristic Guardrails:** Absolute logical boundaries. Any asset with a wholesale cost under 100 USD or a price-per-carat ratio mathematically inconsistent with physical reality (e.g., > 0.5 carats at < 500 USD/ct) is immediately quarantined.
 *   **Isolation Forest (Machine Learning):** Unsupervised outlier detection for high-dimensional statistical anomalies. The algorithm isolates observations by randomly selecting a feature and then randomly selecting a split value between the maximum and minimum values of the selected feature.
 *   **The Math:** The anomaly score for a given observation is defined as:
-    s(x, n) = 2 ^ -( E(h(x)) / c(n) )
+   $$s(x, n) = 2^{-\frac{E(h(x))}{c(n)}}$$
     Where h(x) is the path length required to isolate the data point x, and c(n) is the average path length of an unsuccessful search in a Binary Search Tree of n nodes. Data points yielding an anomaly score approaching 1 are flagged for manual review.
 
 ### 5. R Analytics (Multivariable Regression)
 To audit the integrity of the pricing engine over time, the pipeline invokes an R script (via ggplot2 and standard statistical libraries) to visualize hedonic price distributions.
 
 *   **The Math:** We model the natural logarithm of the retail price as a function of its physical attributes:
-    ln(Price) = Beta_0 + Beta_1(Carat) + Sum(Beta_i * Attribute_i) + Epsilon
+   $$\ln(\text{Price}) = \beta_0 + \beta_1(\text{Carat}) + \sum (\beta_i \cdot \text{Attribute}_i) + \epsilon$$
     This regression allows us to isolate the exact marginal contribution of a specific attribute (like moving from VS1 to VVS2) independent of the carat weight, proving the pricing engine's logic holds at scale.
 
 ### 6. The Interface (Streamlit UI)
