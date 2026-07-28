@@ -111,6 +111,31 @@ The final stage of the pipeline translates the fully normalized, priced, and ano
   }
 }
 ---
+### 8. The Dispatch Protocol (Human-in-the-Loop & Anomaly Quarantine)
+While the pipeline is highly automated, pushing supplier data directly to a live retail environment carries inherent business risk. To mitigate this, the final stage of the architecture features a strictly controlled human-in-the-loop dispatch table.
+
+*   **Interactive Review:** Using Streamlit's `st.data_editor`, the output is rendered as an interactive table. Valid diamonds are automatically pre-checked for Shopify export, but operators retain the ability to manually uncheck and withhold any asset.
+*   **Immutable Data:** All physical specifications and retail prices are strictly locked (`disabled=True`) in the UI. Users can only approve or deny the export; they cannot manually alter the data, ensuring the pricing engine's logic remains uncorrupted.
+*   **The Quarantine Rule (No Auto-Fixing):** If the Isolation Forest algorithm flags a diamond as mathematically anomalous (e.g., a $50,000 diamond listed for $50 due to a supplier typo), the asset is aggressively locked out of the Shopify payload. The system *does not* attempt to auto-fix the anomaly. In high-stakes retail, an AI should never guess a financial correction; it must halt and escalate. Anomalies are permanently unchecked, suppressed from the GraphQL generation, and flagged for manual review via Slack/PagerDuty.
+
+### 9. Business KPI Tracking: Capital Risk Mitigated
+Technical metrics only matter if they drive business outcomes. The Streamlit dashboard actively quantifies the pipeline's value by calculating the **Capital Risk Mitigated**. 
+
+When the Isolation Forest quarantines an anomalous asset, the UI aggregates the wholesale cost of the suppressed inventory. Instead of simply reporting "3 anomalies found," the system reports the exact dollar amount of mispriced inventory prevented from syncing to the live Shopify storefront, aligning technical architecture directly with executive financial metrics.
+
+### 10. Statistical Cross-Validation (Machine Learning vs. Econometrics)
+To ensure the pipeline’s anomaly detection is mathematically robust, the system cross-validates Python's Unsupervised Machine Learning (Isolation Forest) against R's Classical Econometrics (Cook's Distance). 
+
+In R, Cook's Distance ($D_i$) measures the aggregate change in the fitted model when a specific observation is removed. The mathematical definition relies on the sum of squared differences in predictions:
+
+$$D_i = \frac{\sum_{j=1}^{n} (\hat{y}_j - \hat{y}_{j(i)})^2}{p \cdot MSE}$$
+
+**The Architectural "Flex" (Why ML is Necessary)**
+During testing, the pipeline processed a severely mispriced 1.25-carat diamond listed for $81. 
+*   **The R Model (Missed It):** Because $1.25$ carats sits near the mean weight of the dataset, it lacked the statistical *leverage* required on the x-axis to heavily skew the linear regression line. It failed to cross the $\frac{4}{n}$ threshold and was ignored by classical metrics.
+*   **The Python ML Model (Caught It):** The Isolation Forest does not rely on linear leverage; it evaluates multi-dimensional density. It immediately recognized that a $81 price tag for a 1.25-carat stone violates the fundamental density patterns of the dataset and successfully quarantined it.
+
+This intentional discrepancy proves the necessity of the Machine Learning layer: traditional linear statistical auditing is too brittle to protect a live retail system from non-linear supplier typos.
 
 ## LOCAL EXECUTION & AUDIT PROTOCOL
 This architecture is designed for immediate local deployment for auditing and testing purposes. 

@@ -19,7 +19,7 @@ try:
     from src.pricing import calculate_retail_price
     from src.anomaly import HybridAnomalyDetector
     from src.storage import persist_to_duckdb
-    from src.r_analytics import generate_r_analytics_plot
+    from src.r_analytics import generate_r_analytics_plot, generate_cross_validation_plot
 except ImportError as e:
     st.error(f"Missing local module: {e}. Please check your 'src/' directory structure.")
     st.stop()
@@ -129,12 +129,24 @@ if 'df_final' in st.session_state:
     anomalies = df_final[df_final['is_anomaly'] == True]
     anomaly_count = len(anomalies)
 
+    # added: business KPIs
     if anomaly_count > 0:
+        # calculate the financial risk prevented 
+    
+        risk_prevented = anomalies['wholesale_cost'].sum() if 'wholesale_cost' in anomalies.columns else 0.00
+        
         st.error(f"**PagerDuty / Slack Alert:** Flagged {anomaly_count} pricing anomalies. Suppressing from Shopify sync and escalating to `#ops-diamond-review`.")
+        
+        # display the KPI metric
+        st.metric(
+            label="Capital Risk Mitigated (Anomalies Quarantined)", 
+            value=f"${risk_prevented:,.2f}",
+            delta=f"{anomaly_count} Assets Blocked",
+            delta_color="inverse"
+        )
     else:
         st.success("No anomalies detected. Safe to sync.")
 
-    # added: initialize the checkbox column 
     # automatically pre-check diamonds that are NOT anomalies.
     if 'Approved' not in df_final.columns:
         df_final.insert(0, 'Approved', ~df_final['is_anomaly'])
@@ -142,10 +154,8 @@ if 'df_final' in st.session_state:
     def highlight_anomalies(row):
         return ['background-color: #ffcccc; color: #181492;' if row['is_anomaly'] else '' for _ in row]
     
-    # modified: swapped st.dataframe for st.data_editor 
     st.write("Review the pipeline output below. Uncheck any valid diamond you wish to manually withhold from the Shopify sync.")
     
-    # lock all columns except 'Approved' so users can't accidentally alter prices/specs in the UI
     disabled_cols = [col for col in df_final.columns if col != 'Approved']
     
     edited_df = st.data_editor(
@@ -163,22 +173,28 @@ if 'df_final' in st.session_state:
 
     st.divider()
 
-    col1, col2 = st.columns([1.5, 1])
+    # added: dual plot display & GraphQL generation
+    st.markdown("<h3 style='text-align: center;'>Statistical Auditing & GraphQL Sync</h3>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
 
     with col1:
-        st.markdown("<h3 style='text-align: center;'>R-Powered Hedonic Pricing Analysis</h3>", unsafe_allow_html=True)
-        plot_path = generate_r_analytics_plot(df_final)
-        if plot_path:
-            st.image(plot_path, caption="Rendered via ggplot2 (Rscript)")
-        else:
-            st.warning("Could not generate R plot.")
+        st.caption("Hedonic Pricing Model (R)")
+        plot_path_1 = generate_r_analytics_plot(df_final)
+        if plot_path_1:
+            st.image(plot_path_1)
 
     with col2:
-        st.markdown("<h3 style='text-align: center;'>Shopify GraphQL Sync</h3>", unsafe_allow_html=True)
+        st.caption("Cross-Validation: Cook's Distance (R)")
+        plot_path_2 = generate_cross_validation_plot(df_final)
+        if plot_path_2:
+            st.image(plot_path_2)
+
+    with col3:
+        st.caption("Shopify GraphQL Dispatch")
         st.write("Generate payload for manually approved variants.")
         
         if st.button("Generate Dispatch Payload"):
-            # modified: filter using the checkboxes snd ensure it's not an anomaly 
             valid_df = edited_df[(edited_df['Approved'] == True) & (edited_df['is_anomaly'] == False)]
             
             if valid_df.empty:
@@ -201,7 +217,7 @@ if 'df_final' in st.session_state:
                 }
                 
                 st.json(graphql_mutation)
-                st.success(f"Payload ready for POST request to Shopify Admin API. ({len(valid_df)} variants packaged)")
+                st.success(f"Payload ready! ({len(valid_df)} variants packaged)")
 # footer
 st.markdown("<br><hr style='border: 0; height: 1px; background: #D1CFCD;'>", unsafe_allow_html=True)
 st.markdown(
