@@ -5,9 +5,7 @@ This architecture is a highly opinionated, deterministic ETL pipeline designed t
 
 ## LIVE DEMO & INTERFACE PREVIEW
 
-<video src="https://github.com/user-attachments/assets/3497c0d9-2d51-49e2-a7dd-2a4347d71bed" controls="controls" width="100%" style="max-height:640px;">
-  Your browser does not support the video tag.
-</video>
+<video src="https://github.com/user-attachments/assets/6f0fd752-bfe0-4fb2-a2ea-c3c7b1c1aa71" controls="controls" width="100%" style="max-height:640px;">
 
 *The video above demonstrates the pipeline processing chaotic supplier inputs, running batch semantic extraction via Gemini, applying pricing heuristics, and quarantining statistical anomalies in real time.*
 
