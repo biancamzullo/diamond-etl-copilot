@@ -110,7 +110,7 @@ The final stage of the pipeline translates the fully normalized, priced, and ano
     ]
   }
 }
----
+```
 ### 8. The Dispatch Protocol (Human-in-the-Loop & Anomaly Quarantine)
 While the pipeline is highly automated, pushing supplier data directly to a live retail environment carries inherent business risk. To mitigate this, the final stage of the architecture features a strictly controlled human-in-the-loop dispatch table.
 
@@ -137,6 +137,7 @@ During testing, the pipeline processed a severely mispriced 1.25-carat diamond l
 
 This intentional discrepancy proves the necessity of the Machine Learning layer: traditional linear statistical auditing is too brittle to protect a live retail system from non-linear supplier typos.
 
+---
 ## LOCAL EXECUTION & AUDIT PROTOCOL
 This architecture is designed for immediate local deployment for auditing and testing purposes. 
 
