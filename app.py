@@ -122,6 +122,7 @@ if uploaded_file:
             except Exception as err:
                 st.error(f"Pipeline Exception: {str(err)}")
 
+
 if 'df_final' in st.session_state:
     df_final = st.session_state['df_final']
     
@@ -133,10 +134,32 @@ if 'df_final' in st.session_state:
     else:
         st.success("No anomalies detected. Safe to sync.")
 
+    # added: initialize the checkbox column 
+    # automatically pre-check diamonds that are NOT anomalies.
+    if 'Approved' not in df_final.columns:
+        df_final.insert(0, 'Approved', ~df_final['is_anomaly'])
+
     def highlight_anomalies(row):
         return ['background-color: #ffcccc; color: #181492;' if row['is_anomaly'] else '' for _ in row]
     
-    st.dataframe(df_final.style.apply(highlight_anomalies, axis=1), use_container_width=True)
+    # modified: swapped st.dataframe for st.data_editor 
+    st.write("Review the pipeline output below. Uncheck any valid diamond you wish to manually withhold from the Shopify sync.")
+    
+    # lock all columns except 'Approved' so users can't accidentally alter prices/specs in the UI
+    disabled_cols = [col for col in df_final.columns if col != 'Approved']
+    
+    edited_df = st.data_editor(
+        df_final.style.apply(highlight_anomalies, axis=1), 
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Approved": st.column_config.CheckboxColumn(
+                "Approve for Shopify",
+                help="Select to include in the Shopify GraphQL export",
+            )
+        },
+        disabled=disabled_cols 
+    )
 
     st.divider()
 
@@ -152,30 +175,33 @@ if 'df_final' in st.session_state:
 
     with col2:
         st.markdown("<h3 style='text-align: center;'>Shopify GraphQL Sync</h3>", unsafe_allow_html=True)
-        st.write("Generate payload for valid variants (excluding anomalies).")
+        st.write("Generate payload for manually approved variants.")
         
         if st.button("Generate Dispatch Payload"):
-            valid_df = df_final[df_final['is_anomaly'] == False]
+            # modified: filter using the checkboxes snd ensure it's not an anomaly 
+            valid_df = edited_df[(edited_df['Approved'] == True) & (edited_df['is_anomaly'] == False)]
             
-            variants_payload = []
-            for _, row in valid_df.iterrows():
-                variants_payload.append({
-                    "sku": row['supplier_sku'],
-                    "price": str(row['retail_price']),
-                    "inventoryItem": {"tracked": True}
-                })
-                
-            graphql_mutation = {
-                "query": "mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) { productVariantsBulkUpdate(productId: $productId, variants: $variants) { userErrors { field message } } }",
-                "variables": {
-                    "productId": "gid://shopify/Product/987654321",
-                    "variants": variants_payload
+            if valid_df.empty:
+                st.warning("No valid diamonds selected for export.")
+            else:
+                variants_payload = []
+                for _, row in valid_df.iterrows():
+                    variants_payload.append({
+                        "sku": row['supplier_sku'],
+                        "price": str(row['retail_price']),
+                        "inventoryItem": {"tracked": True}
+                    })
+                    
+                graphql_mutation = {
+                    "query": "mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) { productVariantsBulkUpdate(productId: $productId, variants: $variants) { userErrors { field message } } }",
+                    "variables": {
+                        "productId": "gid://shopify/Product/987654321",
+                        "variants": variants_payload
+                    }
                 }
-            }
-            
-            st.json(graphql_mutation)
-            st.success("Payload ready for POST request to Shopify Admin API.")
-
+                
+                st.json(graphql_mutation)
+                st.success(f"Payload ready for POST request to Shopify Admin API. ({len(valid_df)} variants packaged)")
 # footer
 st.markdown("<br><hr style='border: 0; height: 1px; background: #D1CFCD;'>", unsafe_allow_html=True)
 st.markdown(
