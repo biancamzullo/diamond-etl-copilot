@@ -54,15 +54,17 @@ This architecture is designed for immediate local deployment for auditing and te
 
 **1. Clone the Architecture**
 ```bash
-git clone <your-repository-url>
-cd <your-repository-folder>
+git clone <https://github.com/biancamzullo/diamond-etl-copilot.git>
+cd <diamond-etl-copilot>
 ```
 
-**2. Isolate the Environment**
+**2. Install uv (If not already installed)**
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+# On macOS via Homebrew
+brew install uv
+
+# On Linux / Windows
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 **3. Inject Authentication**
@@ -72,8 +74,10 @@ GOOGLE_API_KEY="your_api_key_here"
 ```
 
 **4. Ignite the Interface**
+`uv` automatically resolves dependencies from `pyproject.toml`, manages the virtual environment, and executes the application in a single command:
 ```bash
-streamlit run app.py
+uv run streamlit run app.py
+```
 ```
 
 
