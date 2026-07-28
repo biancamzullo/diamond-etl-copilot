@@ -130,7 +130,7 @@ In R, Cook's Distance ($D_i$) measures the aggregate change in the fitted model 
 
 $$D_i = \frac{\sum_{j=1}^{n} (\hat{y}_j - \hat{y}_{j(i)})^2}{p \cdot MSE}$$
 
-**The Architectural "Flex" (Why ML is Necessary)**
+**Why ML is Necessary**
 During testing, the pipeline processed a severely mispriced 1.25-carat diamond listed for $81. 
 *   **The R Model (Missed It):** Because $1.25$ carats sits near the mean weight of the dataset, it lacked the statistical *leverage* required on the x-axis to heavily skew the linear regression line. It failed to cross the $\frac{4}{n}$ threshold and was ignored by classical metrics.
 *   **The Python ML Model (Caught It):** The Isolation Forest does not rely on linear leverage; it evaluates multi-dimensional density. It immediately recognized that a $81 price tag for a 1.25-carat stone violates the fundamental density patterns of the dataset and successfully quarantined it.
