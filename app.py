@@ -9,9 +9,17 @@ st.set_page_config(page_title="Diamond ETL Copilot", layout="wide")
 # load environment variables
 load_dotenv()
 
-if not os.getenv("GOOGLE_API_KEY"):
-    st.error("🔑 `GOOGLE_API_KEY` missing! Please check your .env file.")
-    st.stop()
+api_key = os.getenv("GOOGLE_API_KEY")
+
+if not api_key:
+    st.warning("⚠️ `GOOGLE_API_KEY` missing from `.env` file.")
+    api_key = st.text_input("Please enter your Gemini API Key to continue:", type="password")
+    
+    if not api_key:
+        st.stop() 
+
+# Now set the environment variable so the GenAI SDK can pick it up automatically
+os.environ["GOOGLE_API_KEY"] = api_key
 
 # clean modular imports
 try:
