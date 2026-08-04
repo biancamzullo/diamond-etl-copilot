@@ -1,4 +1,11 @@
 # scripts/cross_validation_audit.R
+# acts as an independent statistical auditor. it uses classical linear regression 
+# and cook's distance to cross-validate the python isolation forest model, proving the necessity of multi-dimensional ml.
+# inputs: input_csv (temporary state data from python), output_png (destination file path)
+# outputs: writes a diagnostic png image to the disk.
+# errors: fails if the dataset lacks 'carat' or 'retail_price' columns, or if variance is zero.
+
+# fetch command line arguments passed from python's subprocess module
 args <- commandArgs(trailingOnly = TRUE)
 data_path <- args[1]
 output_path <- args[2]

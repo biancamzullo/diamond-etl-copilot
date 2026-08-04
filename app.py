@@ -12,13 +12,14 @@ load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
 if not api_key:
+    # fallback: allow manual key entry if the environment isn't set up
     st.warning("⚠️ `GOOGLE_API_KEY` missing from `.env` file.")
     api_key = st.text_input("Please enter your Gemini API Key to continue:", type="password")
     
     if not api_key:
         st.stop() 
 
-# Now set the environment variable so the GenAI SDK can pick it up automatically
+# sets the environment variable so the google sdk can pick it up automatically
 os.environ["GOOGLE_API_KEY"] = api_key
 
 # clean modular imports
@@ -98,6 +99,7 @@ uploaded_file = st.file_uploader("Upload messy_supplier_inventory.csv", type=["c
 # UI pipeline
 
 if uploaded_file:
+    # load raw csv into memory
     df_raw = pd.read_csv(uploaded_file)
     limit = st.slider("Select rows to process", 3, len(df_raw), 15)
     
@@ -105,42 +107,49 @@ if uploaded_file:
     run_button = st.button("RUN PIPELINE, DARLING", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # execute the pipeline when the user triggers it
     if run_button:
+        # truncate the dataframe based on the slider limit to control api costs
         df_subset = df_raw.head(limit)
+        # initialize the parsing and detection engines
         normalizer = LLMNormalizer()
         detector = HybridAnomalyDetector()
         
         with st.spinner("Processing Batch through Gemini Engine..."):
+            # convert to dictionary format so the llm can read it efficiently
             try:
                 row_dicts = df_subset.to_dict(orient="records")
+                # execute batch semantic parsing via gemini
                 cleaned_rows = normalizer.normalize_batch(row_dicts)
-                
+                # re-attach the original skus to the parsed data (bypassing the llm to ensure no hallucinations on ids)
                 for idx, clean_dict in enumerate(cleaned_rows):
                     if idx < len(df_subset):
                         clean_dict["supplier_sku"] = df_subset.iloc[idx].get("supplier_sku", f"SKU-{idx}")
                 
                 df_clean = pd.DataFrame(cleaned_rows)
+                # apply deterministic python pricing (no ai guessing allowed here)
                 df_clean["retail_price"] = df_clean.apply(calculate_retail_price, axis=1)
+                # run the statistical isolation forest model to flag pricing anomalies
                 df_processed = detector.detect(df_clean)
-                
+                # persist the clean state into the duckdb columnar database
                 conn = persist_to_duckdb(df_processed)
+                # save the output into streamlit's session state so it survives ui re-renders
                 st.session_state['df_final'] = conn.execute("SELECT * FROM supplier_inventory").df()
                 st.success("Pipeline Complete!")
 
             except Exception as err:
                 st.error(f"Pipeline Exception: {str(err)}")
 
-
+# post processing dispatch ui
 if 'df_final' in st.session_state:
     df_final = st.session_state['df_final']
-    
+    # isolate the anomalies for business metric calculations
     anomalies = df_final[df_final['is_anomaly'] == True]
     anomaly_count = len(anomalies)
 
     # added: business KPIs
     if anomaly_count > 0:
         # calculate the financial risk prevented 
-    
         risk_prevented = anomalies['wholesale_cost'].sum() if 'wholesale_cost' in anomalies.columns else 0.00
         
         st.error(f"**PagerDuty / Slack Alert:** Flagged {anomaly_count} pricing anomalies. Suppressing from Shopify sync and escalating to `#ops-diamond-review`.")
@@ -164,8 +173,10 @@ if 'df_final' in st.session_state:
     
     st.write("Review the pipeline output below. Uncheck any valid diamond you wish to manually withhold from the Shopify sync.")
     
+    # lock down all physical and financial columns so operators cannot accidentally break the business logic
     disabled_cols = [col for col in df_final.columns if col != 'Approved']
     
+    # render the interactive dispatch table
     edited_df = st.data_editor(
         df_final.style.apply(highlight_anomalies, axis=1), 
         use_container_width=True,
@@ -181,19 +192,21 @@ if 'df_final' in st.session_state:
 
     st.divider()
 
-    # added: dual plot display & GraphQL generation
+    
     st.markdown("<h3 style='text-align: center;'>Statistical Auditing & GraphQL Sync</h3>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1, 1])
 
     with col1:
         st.caption("Hedonic Pricing Model (R)")
+        # orchestrate the primary r visualization
         plot_path_1 = generate_r_analytics_plot(df_final)
         if plot_path_1:
             st.image(plot_path_1)
 
     with col2:
         st.caption("Cross-Validation: Cook's Distance (R)")
+        # orchestrate the econometric audit visualization
         plot_path_2 = generate_cross_validation_plot(df_final)
         if plot_path_2:
             st.image(plot_path_2)
@@ -201,21 +214,23 @@ if 'df_final' in st.session_state:
     with col3:
         st.caption("Shopify GraphQL Dispatch")
         st.write("Generate payload for manually approved variants.")
-        
+        # construct the graphql bulk update payload
         if st.button("Generate Dispatch Payload"):
+            # strictly filter for rows that are checked AND not flagged as anomalies
             valid_df = edited_df[(edited_df['Approved'] == True) & (edited_df['is_anomaly'] == False)]
             
             if valid_df.empty:
                 st.warning("No valid diamonds selected for export.")
             else:
                 variants_payload = []
+                # build the minimal variant dicts targeting only dynamic data (zero payload bloat)
                 for _, row in valid_df.iterrows():
                     variants_payload.append({
                         "sku": row['supplier_sku'],
                         "price": str(row['retail_price']),
                         "inventoryItem": {"tracked": True}
                     })
-                    
+                # wrap the variants in the official shopify admin api mutation structure
                 graphql_mutation = {
                     "query": "mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) { productVariantsBulkUpdate(productId: $productId, variants: $variants) { userErrors { field message } } }",
                     "variables": {
